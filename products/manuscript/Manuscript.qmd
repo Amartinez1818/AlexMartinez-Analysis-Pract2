@@ -94,15 +94,31 @@ Ok thanks.
 
 ## Description of data and data source
 
-*Describe what the data is, what it contains, where it is from, etc. Eventually this might be part of a methods section.*
+This dataset is a cleaned version of the original [Mushroom Dataset for Binary Classification](https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset) Available at UCI Library. This dataset was cleaned using various techniques such as Modal imputation, one-hot encoding, z-score normalization, and feature selection. It contains 9 columns:
+
+1.  Cap Diameter
+
+2.  Cap Shape
+
+3.  Gill Attachment
+
+4.  Gill Color
+
+5.  Stem Height
+
+6.  Stem Width
+
+7.  Stem Color
+
+8.  Season
+
+9.  Target Class - Is it edible or not?
+
+The Target Class contains two values - 0 or 1 - where 0 refers to edible and 1 refers to poisonous.
 
 ## Questions/Hypotheses to be addressed
 
-*State the research questions you plan to answer with this analysis.*
-
-To cite other work (important everywhere, but likely happens first in introduction), make sure your references are in the bibtex file specified in the YAML header above and have the right bibtex key. Then you can include like this:
-
-Examples of reproducible research projects can for instance be found in [@mckay2020; @mckay2020a].
+*Using the Variables listed above, what is the best predictive model to determine if a mushroom is edible or not.*
 
 {{< pagebreak >}}
 
@@ -123,11 +139,26 @@ knitr::include_graphics(here("assets","antigen-recognition.png"))
 
 ## Data aquisition
 
-*As applicable, explain where and how you got the data. If you directly import the data from an online source, you can combine this section with the next.*
+*The data is from the Kaggle website that has been listed above. It is a CSV file with 9 variables and \~50,000 rows.*
 
 ## Data import and cleaning
 
 *Write code that reads in the file and cleans it so it's ready for analysis. Since this will be fairly long code for most datasets, it might be a good idea to have it in one or several R scripts. If that is the case, explain here briefly what kind of cleaning/processing you do, and provide more details and well documented code somewhere (e.g. as supplement in a paper). All materials, including files that contain code, should be commented well so everyone can follow along.*
+
+The data is pretty cleaned already espescially since it is only 9 variables and \~50,000 rows. Here is the import
+
+```{r}
+library(tidyverse)
+getwd()
+mushrooms <- read.csv('C:/Users/alexm/Downloads/Pract 2/AlexMartinez-Analysis-Pract2/data/mushroom_cleaned.csv')
+
+
+## Lets Explore the data
+head(mushrooms)
+str(mushrooms)
+
+summary(mushrooms)
+```
 
 ## Statistical analysis
 
@@ -140,6 +171,68 @@ knitr::include_graphics(here("assets","antigen-recognition.png"))
 ## Exploratory/Descriptive analysis
 
 *Use a combination of text/tables/figures to explore and describe your data. Show the most important descriptive results here. Additional ones should go in the supplement. Even more can be in the R and Quarto files that are part of your project.*
+
+```{r}
+#Exploring all varibles with some visualizations
+mushrooms %>% ggplot(aes(x = cap.diameter)) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  theme_minimal()
+
+ggplot(mushrooms, aes(x = factor(cap.shape))) +
+  geom_bar(fill = 'black') +
+  labs(x = "Cap Shape", y = "Frequency", title = "Frequency of Mushroom Cap Shape") +
+  theme_minimal()
+
+ggplot(mushrooms, aes(x = factor(gill.attachment))) +
+  geom_bar(fill = 'black') +
+  labs(x = "Gill Attachment", y = "Frequency", title = "Frequency of Mushroom Gill Attachment") +
+  theme_minimal()
+
+ggplot(mushrooms, aes(x = factor(gill.color))) +
+  geom_bar(fill = 'black') +
+  labs(x = "Gill Color", y = "Frequency", title = "Frequency of Mushroom Gill Color") +
+  theme_minimal()
+
+ggplot(mushrooms, aes(x = stem.height)) +
+  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black") +
+  labs(x = "Stem Height", y = "Frequency", title = "Histogram of Stem Height") +
+  theme_minimal()
+ggplot(mushrooms, aes(x = stem.height)) +
+  geom_histogram(binwidth = 0.1, fill = "skyblue", color = "black") +
+  labs(x = "Stem Height", y = "Frequency", title = "Histogram of Stem Height") +
+  theme_minimal()
+
+
+ggplot(mushrooms, aes(x = stem.width)) +
+  geom_histogram(binwidth = 50, fill = "skyblue", color = "black") +
+  labs(x = "Stem Width", y = "Frequency", title = "Histogram of Stem Width") +
+  theme_minimal()
+ggplot(mushrooms, aes(y = stem.width)) +
+  geom_boxplot(fill = "skyblue", color = "black") +
+  labs(y = "Stem Width", title = "Boxplot of Stem Width") +
+  theme_minimal()
+
+ggplot(mushrooms, aes(x = factor(stem.color))) +
+  geom_bar(fill = 'black') +
+  labs(x = "Stem Color", y = "Frequency", title = "Frequency of Mushroom Stem Color") +
+  theme_minimal()
+
+
+ggplot(mushrooms, aes(x = factor(class))) +
+  geom_bar(fill = 'red') +
+  labs(x = "Class", y = "Frequency", title = "Frequency of Mushroom Classes") +
+  theme_minimal()
+
+  
+
+#lets view a correlation matrix of all the variables
+library(corrplot)
+correlation_matrix <- cor(mushrooms)
+print(correlation_matrix)
+
+# correlation matrix heatmap
+corrplot(correlation_matrix, method = "color")
+```
 
 @tbl-summarytable shows a summary of the data.
 
