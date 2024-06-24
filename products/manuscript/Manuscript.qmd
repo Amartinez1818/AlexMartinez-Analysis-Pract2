@@ -263,15 +263,79 @@ knitr::include_graphics(here("results","figures","height-weight-stratified.png")
 
 *Use one or several suitable statistical/machine learning methods to analyze your data and to produce meaningful figures, tables, etc. This might again be code that is best placed in one or several separate R scripts that need to be well documented. You want the code to produce figures and data ready for display as tables, and save those. Then you load them here.*
 
-Example @tbl-resulttable2 shows a summary of a linear model fit.
 
 ```{r}
-#| label: tbl-resulttable2
-#| tbl-cap: "Linear model fit table."
-#| echo: FALSE
-resulttable2 = readRDS(here("results","tables","resulttable2.rds"))
-knitr::kable(resulttable2)
+#libraries needed
+library(tidyverse)
+library(caret)
+library(randomForest)
+library(rpart)
+library(lightgbm)
+library(gbm)
 ```
+```{r}
+data <- mushrooms
+
+# Convert class to factor
+data$class <- as.factor(data$class)
+
+# Scale the specified columns
+scaled_data <- data %>%
+  mutate(across(c(cap.diameter, stem.width, season), scale))
+
+# Convert necessary columns to factors
+scaled_data <- scaled_data %>%
+  mutate(across(c(cap.shape, gill.attachment, gill.color, stem.color), as.factor))
+
+# Split data into features and target variable
+X <- scaled_data %>%
+  select(-class)
+y <- scaled_data$class
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Create training and testing datasets
+trainIndex <- createDataPartition(y, p = 0.9, list = FALSE)
+X_train <- X[trainIndex, ]
+X_test <- X[-trainIndex, ]
+y_train <- y[trainIndex]
+y_test <- y[-trainIndex]
+
+# Train Random Forest Classifier
+rf_model <- randomForest(x = X_train, y = y_train, ntree = 100)
+rf_pred <- predict(rf_model, X_test)
+rf_accuracy <- mean(rf_pred == y_test)
+print(paste("Random Forest Accuracy:", rf_accuracy))
+
+# Train Decision Tree Classifier
+dt_model <- rpart(class ~ ., data = data.frame(X_train, class = y_train))
+dt_pred <- predict(dt_model, X_test, type = "class")
+dt_accuracy <- mean(dt_pred == y_test)
+print(paste("Decision Tree Accuracy:", dt_accuracy))
+
+# Convert data to matrix format for LightGBM
+X_train_matrix <- as.matrix(X_train)
+X_test_matrix <- as.matrix(X_test)
+
+# Train LightGBM Classifier
+lgb_train <- lgb.Dataset(data = X_train_matrix, label = as.numeric(y_train) - 1)
+params <- list(objective = "multiclass", num_class = length(levels(y_train)))
+lgb_model <- lgb.train(params, lgb_train, 100)
+lgb_pred <- predict(lgb_model, X_test_matrix)
+lgb_pred_class <- factor(max.col(lgb_pred) - 1, levels = 0:(length(levels(y_train)) - 1))
+lgb_accuracy <- mean(lgb_pred_class == y_test)
+print(paste("LightGBM Accuracy:", lgb_accuracy))
+
+# Train GBM Classifier using gbm package
+gbm_model <- gbm(class ~ ., data = data.frame(X_train, class = y_train), distribution = "multinomial", n.trees = 100, cv.folds = 5, interaction.depth = 3, shrinkage = 0.01, n.minobsinnode = 10)
+gbm_pred <- predict(gbm_model, newdata = X_test, n.trees = gbm.perf(gbm_model, method = "cv"), type = "response")
+gbm_pred_class <- factor(max.col(gbm_pred), levels = 1:length(levels(y_train)) - 1)
+gbm_accuracy <- mean(gbm_pred_class == y_test)
+print(paste("GBM Accuracy:", gbm_accuracy))
+```
+
+
 
 {{< pagebreak >}}
 
