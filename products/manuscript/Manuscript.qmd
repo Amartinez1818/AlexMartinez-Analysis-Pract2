@@ -126,24 +126,20 @@ The Target Class contains two values - 0 or 1 - where 0 refers to edible and 1 r
 
 *Describe your methods. That should describe the data, the cleaning processes, and the analysis approaches. You might want to provide a shorter description here and all the details in the supplement.*
 
-## Schematic of workflow
+The modeling methods I will be using are the following
 
-Sometimes you might want to show a schematic diagram/figure that was not created with code (if you can do it with code, do it). @fig-schematic is an example of some - completely random/unrelated - schematic that was generated with Biorender. We store those figures in the `assets` folder.
 
-```{r}
-#| label: fig-schematic
-#| fig-cap: "A figure that is manually generated and shows some overview/schematic. This has nothing to do with the data, it's just a random one from one of our projects I found and placed here."
-#| echo: FALSE
-knitr::include_graphics(here("assets","antigen-recognition.png"))
-```
+A random forest model is trained using 100 trees.
+A decision tree is just one simple decision tree that is evaluated.
+A lighGBM model is efficient for large datasets but can still work on smaller ones.
+GBM uses cross-validation to find the optimal number of trees.
+
 
 ## Data aquisition
 
 *The data is from the Kaggle website that has been listed above. It is a CSV file with 9 variables and \~50,000 rows.*
 
 ## Data import and cleaning
-
-*Write code that reads in the file and cleans it so it's ready for analysis. Since this will be fairly long code for most datasets, it might be a good idea to have it in one or several R scripts. If that is the case, explain here briefly what kind of cleaning/processing you do, and provide more details and well documented code somewhere (e.g. as supplement in a paper). All materials, including files that contain code, should be commented well so everyone can follow along.*
 
 The data is pretty cleaned already espescially since it is only 9 variables and \~50,000 rows. Here is the import
 
@@ -234,30 +230,14 @@ print(correlation_matrix)
 corrplot(correlation_matrix, method = "color")
 ```
 
-@tbl-summarytable shows a summary of the data.
 
-Note the loading of the data providing a **relative** path using the `../../` notation. (Two dots means a folder up). You never want to specify an **absolute** path like `C:\ahandel\myproject\results\` because if you share this with someone, it won't work for them since they don't have that path. You can also use the `here` R package to create paths. See examples of that below. I generally recommend the `here` package.
 
-```{r}
-#| label: tbl-summarytable
-#| tbl-cap: "Data summary table."
-#| echo: FALSE
-resulttable=readRDS("../../results/tables/summarytable.rds")
-knitr::kable(resulttable)
-```
 
 ## Basic statistical analysis
 
 *To get some further insight into your data, if reasonable you could compute simple statistics (e.g. simple models with 1 predictor) to look for associations between your outcome(s) and each individual predictor variable. Though note that unless you pre-specified the outcome and main exposure, any "p\<0.05 means statistical significance" interpretation is not valid.*
 
-@fig-result shows a scatterplot figure produced by one of the R scripts.
 
-```{r}
-#| label: fig-result
-#| fig-cap: "Height and weight stratified by gender."
-#| echo: FALSE
-knitr::include_graphics(here("results","figures","height-weight-stratified.png"))
-```
 
 ## Full analysis
 
@@ -334,6 +314,27 @@ gbm_pred_class <- factor(max.col(gbm_pred), levels = 1:length(levels(y_train)) -
 gbm_accuracy <- mean(gbm_pred_class == y_test)
 print(paste("GBM Accuracy:", gbm_accuracy))
 ```
+Best Performance
+```{r}
+#best variables
+print(paste("Random Forest Accuracy:", rf_accuracy))
+var_importance <- importance(rf_model)
+var_importance_df <- data.frame(Variable = rownames(var_importance), 
+                                Importance = var_importance[, 'MeanDecreaseGini'])
+
+# Print the variable importance
+print(var_importance_df)
+
+# Plot variable importance
+library(ggplot2)
+ggplot(var_importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  xlab("Variable") +
+  ylab("Importance") +
+  ggtitle("Variable Importance from Random Forest Model") +
+  theme_minimal()
+```
 
 
 
@@ -343,24 +344,33 @@ print(paste("GBM Accuracy:", gbm_accuracy))
 
 ## Summary and Interpretation
 
-*Summarize what you did, what you found and what it means.*
+The four classification models we used to help determine what mushroom is edible or not is the Random Forest, Decision Tree, LightBGM, and GBM classifier. We will determine which one is the best by looking at its performance on our test dataset.
 
-## Strengths and Limitations
+A random forest model is trained using 100 trees.
+A decision tree is just one simple decision tree that is evaluated.
+A lighGBM model is efficient for large datasets but can still work on smaller ones.
+GBM uses cross-validation to find the optimal number of trees.
 
-*Discuss what you perceive as strengths and limitations of your analysis.*
 
 ## Conclusions
 
-*What are the main take-home messages?*
+Our best model is the random forest model. It has an accuracy of 98.9% of predicting which mushrooms are edible using the following factors: Stem Width, Gill Attachment, Stem Color, Gill Color, Cap Shape, Stem Height, Cap Diameter and Season. From these factors, the top four that are best at predicting if a mushroom is edible or not base on that factor alone are Stem Width, Gill Attachment, Stem Color, Gill Color ordered from most importance to least importance. 
 
-*Include citations in your Rmd file using bibtex, the list of references will automatically be placed at the end*
+```{r}
+# Extract the top 4 important variables
+top4_vars <- head(var_importance_df[order(-var_importance_df$Importance), ], 4)
+print(top4_vars)
+poisonous_mushrooms <- subset(mushrooms, class == 0)
+summary(poisonous_mushrooms[, top4_vars$Variable])
 
-This paper [@leek2015] discusses types of analyses.
-
-These papers [@mckay2020; @mckay2020a] are good examples of papers published using a fully reproducible setup similar to the one shown in this template.
-
-Note that this cited reference will show up at the end of the document, the reference formatting is determined by the CSL file specified in the YAML header. Many more style files for almost any journal [are available](https://www.zotero.org/styles). You also specify the location of your bibtex reference file in the YAML. You can call your reference file anything you like.
+boxplot(poisonous_mushrooms$stem.width)
+boxplot(poisonous_mushrooms$gill.attachment)
+boxplot(poisonous_mushrooms$stem.color)
+boxplot(poisonous_mushrooms$gill.color)
+```
+We see from the top 4 most important variables that help determine if a mushroom is edible or not have the following in common. A stem width of 1157, gill attachment of 2, stem color of code 11 and gill color of code 10. So if you have a mushroom with any of these features, be safe!
 
 {{< pagebreak >}}
 
 # References
+[Dataset](https://www.kaggle.com/datasets/prishasawhney/mushroom-dataset/data). The kaggle version is a cleaned version of the original [Mushroom Dataset for Binary Classification](https://archive.ics.uci.edu/dataset/848/secondary+mushroom+dataset), available at UCI Library.
